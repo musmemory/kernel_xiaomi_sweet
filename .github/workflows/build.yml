@@ -33,13 +33,10 @@ jobs:
             xsltproc zip zlib1g-dev python3 libelf-dev
 
       # 3. Download the ARM64 cross-compiler (Clang from AOSP)
-      - name: Download Clang toolchain
+- name: Download Clang toolchain
         run: |
           mkdir -p $HOME/clang
-          cd $HOME/clang
-          # Using AOSP's prebuilt Clang — a reliable choice for Snapdragon kernels
-          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r487747c.tar.gz -O clang.tar.gz
-          tar -xzf clang.tar.gz
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang $HOME/clang
           echo "CLANG_PATH=$HOME/clang/bin" >> $GITHUB_ENV
 
       # Alternative: use proton-clang which many custom kernel devs prefer
