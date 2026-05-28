@@ -1,0 +1,120 @@
+name: Build Sweet Kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+
+    - name: Checkout Source
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+
+        sudo apt install -y \
+          bc bison build-essential ccache curl flex g++-multilib \
+          gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev \
+          lib32readline-dev lib32z1-dev libelf-dev liblz4-tool \
+          libncurses5-dev libsdl1.2-dev libssl-dev libxml2 \
+          libxml2-utils lzop pngcrush rsync schedtool \
+          squashfs-tools xsltproc zip zlib1g-dev python3
+
+    - name: Add Swap
+      uses: pierotofy/set-swap-space@master
+      with:
+        swap-size-gb: 12
+
+    - name: Clone Proton Clang
+      run: |
+        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git ~/clang
+
+    - name: Setup Environment
+      run: |
+        echo "ARCH=arm64" >> $GITHUB_ENV
+        echo "SUBARCH=arm64" >> $GITHUB_ENV
+        echo "KBUILD_BUILD_USER=github" >> $GITHUB_ENV
+        echo "KBUILD_BUILD_HOST=actions" >> $GITHUB_ENV
+        echo "$HOME/clang/bin" >> $GITHUB_PATH
+
+    - name: Clean Source
+      run: |
+        make mrproper
+
+    - name: Configure Kernel
+      run: |
+        make O=out ARCH=arm64 sweet_defconfig
+
+    - name: Build Kernel
+      run: |
+        make -j$(nproc --all) \
+        O=out \
+        ARCH=arm64 \
+        CC=clang \
+        CROSS_COMPILE=aarch64-linux-gnu- \
+        CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+
+    - name: Clone AnyKernel3
+      run: |
+        git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
+
+            - name: Configure AnyKernel3 for Sweet
+      run: |
+        rm -f AnyKernel3/anykernel.sh
+
+        cat << 'EOF' > AnyKernel3/anykernel.sh
+        ### AnyKernel3 Ramdisk Mod Script
+        ## osm0sis @ xda-developers
+
+        properties() { '
+        kernel.string=ViP3R Sweet Kernel
+        do.devicecheck=1
+        do.modules=0
+        do.systemless=1
+        do.cleanup=1
+        do.cleanuponabort=0
+        device.name1=sweet
+        device.name2=sweetin
+        supported.versions=
+        supported.patchlevels=
+        supported.vendorpatchlevels=
+        '; }
+
+        block=boot;
+        is_slot_device=auto;
+        ramdisk_compression=auto;
+        patch_vbmeta_flag=auto;
+
+        . tools/ak3-core.sh;
+
+        dump_boot;
+
+        write_boot;
+        EOF
+
+    - name: Copy Kernel
+      run: |
+        cp out/arch/arm64/boot/Image.gz AnyKernel3/
+
+        if [ -f out/arch/arm64/boot/dtbo.img ]; then
+          cp out/arch/arm64/boot/dtbo.img AnyKernel3/
+        fi
+
+    - name: Edit AnyKernel
+      run: |
+        sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
+
+    - name: Create ZIP
+      run: |
+        cd AnyKernel3
+        zip -r9 SweetKernel.zip * -x .git README.md
+
+    - name: Upload ZIP
+      uses: actions/upload-artifact@v4
+      with:
+        name: SweetKernel
+        path: AnyKernel3/SweetKernel.zip
