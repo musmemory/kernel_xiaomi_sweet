@@ -62,6 +62,7 @@ jobs:
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
 
+
     - name: Configure AnyKernel3 for Sweet
       run: |
         rm -f AnyKernel3/anykernel.sh
