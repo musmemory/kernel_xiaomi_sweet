@@ -47,7 +47,7 @@ jobs:
       - name: Package kernel with AnyKernel3
         run: |
           git clone --depth=1 https://github.com/osm0sis/AnyKernel3 AnyKernel3
-          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cp out/arch/arm64/boot/Image.gz AnyKernel3/
           cp out/arch/arm64/boot/dtbo.img AnyKernel3/ 2>/dev/null || true
           find out/arch/arm64/boot/dts -name "*.dtb" -exec cat {} + > AnyKernel3/dtb 2>/dev/null || true
           cd AnyKernel3
